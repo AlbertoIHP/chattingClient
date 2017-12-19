@@ -12,7 +12,8 @@ class FriendService {
 
 		options = bodyContent === false  ? { method : methodType, headers : headers} : { method : methodType, headers : headers , body : bodyContent}
 		
-
+		console.log(api)
+		console.log(options)
 
 
 		try

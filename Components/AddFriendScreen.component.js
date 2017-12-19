@@ -23,7 +23,11 @@ import {
 } from "native-base";
 
 
-import { createFilter } from 'react-native-search-filter';
+
+
+
+//SOCKET
+import { socket } from '../Services/socket'
 
 export default class AddFriendScreen extends React.Component{
 
@@ -45,7 +49,29 @@ export default class AddFriendScreen extends React.Component{
   componentDidMount()
   {
     this.setState( previousState =>{
+
+
+      //Sacamos al usuario logeado del total
       previousState.users = previousState.users.filter( user => user.id != previousState.currentUser.id )
+
+
+      // ahora nos quedamos con el amigo solamente
+      let aux = []
+      for( let friendship of previousState.friends )
+      {
+        friendship.friend1.id === previousState.currentUser.id ? aux.push(friendship.friend2) : aux.push(friendship.friend1)
+      }
+
+      console.log("MOSTRANDO USUARIOS AMIGOS DEL USUARIO ACTUAL "+previousState.currentUser.email)
+      console.log(aux)
+
+      for( let friend of aux )
+      {
+        previousState.users = previousState.users.filter( user => user.email != friend.email  )
+      }
+      console.log("MOSTRANDO LOS USUARIOS DISPONIBLES PARA AGREGAR")
+      console.log(previousState.users)
+
       previousState.showedUsers = previousState.users
       return previousState
     })    
@@ -110,7 +136,17 @@ export default class AddFriendScreen extends React.Component{
     let friendship = { friend1: this.state.currentUser, friend2: friend }
     let response = await friendService.store( friendship)
 
-    console.log("Se va a agregar a los amigos de "+this.state.currentUser.email+ ", al usuario "+friend.email)
+    if( response )
+    {
+      Alert.alert("¡ La amistad ha sido concretada !")
+      socket.emit('friendAdded', JSON.stringify(friendship))
+    }
+    else
+    {
+      Alert.alert("No se ha podido concretar la amistad...")
+
+    }
+
   }
 
 

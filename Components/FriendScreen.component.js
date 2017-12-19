@@ -23,16 +23,44 @@ import {
 import { friendService } from '../Services/Friend.service'
 import { userService } from '../Services/User.service'
 
+
+//SOCKET
+import { socket } from '../Services/socket'
+
+
 export default class FriendScreen extends React.Component{
 
 	constructor( props )
 	{
 		super(props)
 
-		this.state = { friends: [], users: [], currentUser: this.props.user }
+		this.state = { friends: [], users: [], currentUser: this.props.user, showedFriends: [] }
 
 		this.getFriends()
+
+    //Especificamos el evento qeu configuramos en el servidor
+    //Recibiremos la nueva amistad, y si el clietne esta involucrado entonces realizara nuevamente la peticion a la API
+    socket.on('friendAdded', ( friendship ) =>{
+
+      friendship = JSON.parse(friendship)
+      if( friendship.friend1.email === this.state.currentUser.email || friendship.friend2.email === this.state.currentUser.email)
+      {
+        this.getFriends()        
+      }
+    } );
+
+    socket.on('friendAdded', ( friendship ) =>{
+      
+      friendship = JSON.parse(friendship)
+      if( friendship.friend1.email === this.state.currentUser.email || friendship.friend2.email === this.state.currentUser.email)
+      {
+        this.getFriends()        
+      }
+    } );
 	}
+
+
+
 
 
 	getFriends = async function()
@@ -48,14 +76,18 @@ export default class FriendScreen extends React.Component{
     //Friend 2 es el amigo del usuari olgoeado
     for (let friend of myFriends)
     {
-      console.log(friend)
-      total.push(friend.friend2)
+
+      let real = friend.friend2
+      real.id = friend._id
+
+
+      total.push(real)
     }
 
-    console.log(myFriends)
 
     this.setState( previousState => {
-      previousState.friends = total
+      previousState.showedFriends = total
+      previousState.friends = myFriends
       return previousState
     })
 
@@ -74,12 +106,31 @@ export default class FriendScreen extends React.Component{
       '¡Cuidado!',
       `¿Que deseas hacer con ${user.email}?`,
       [
-        {text: 'Eliminarlo', onPress: () => this.addFriend(user) },
+        {text: 'Eliminarlo', onPress: () => this.deleteFriendship(user) },
         {text: 'Iniciar Conversacion', onPress: () => this.goChat(user) },
         {text: 'Cancelar', onPress: () => console.log('Cancel Pressed'), style: 'cancel'}
       ],
       { cancelable: false }
     )
+  }
+
+
+  deleteFriendship = async function( friendship )
+  {
+    console.log(friendship)
+
+    let response = friendService.destroy( friendship.id, this.props.token)
+
+    if( response )
+    {
+      Alert.alert('¡ Amistad eliminada !')
+      socket.emit('friendDeleted', JSON.stringify(friendship))
+    }
+    else
+    {
+      Alert.alert('No se pudo realizar la transaccion...')
+    }
+
   }
 
 
@@ -91,8 +142,6 @@ export default class FriendScreen extends React.Component{
 
 	getCardItem( friend )
 	{
-
-    console.log(friend)
 
 		return (
     <TouchableHighlight onPress={() => this.showOptions(friend) }>
@@ -124,7 +173,7 @@ export default class FriendScreen extends React.Component{
           <Card >
 
           <FlatList 
-          data={ this.state.friends } 
+          data={ this.state.showedFriends } 
           renderItem={ ( { item } ) => this.getCardItem( item ) } />
 						
 
